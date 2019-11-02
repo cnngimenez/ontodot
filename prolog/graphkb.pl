@@ -24,7 +24,11 @@
               load_ttl/1,
               draw_all/0,
               draw_graph/1,
-              list_nodes/1
+              draw_prefix/1,
+              list_nodes/1,
+              dot_all/1,
+              dot_prefix/2,
+              dot_graph/2
           ]).
 /** <module> Graph KB: Make graphs with the input ontology.
 
@@ -296,6 +300,8 @@ get_all_assocs([Node|NRest], Lst) :-
 
 Write to stdout the dot string that represent the default RDF graph.
 
+Write to stdout a dot representation of the default RDF graph. To improve readability, property objects are not represented associated with the other subjects. See draw_edges_noprops/1 for more information.
+
 tell/1 and told/0 can be used to store the string into a file. For example:
 
 ```
@@ -309,4 +315,40 @@ draw_all :-
     draw_nodes(Assocs), nl, nl,
     draw_edges_noprops(Assocs),
     write('}'), nl.
-    
+
+
+nodes_with_prefix(Prefix, Nodes) :-
+    list_nodes(AllNodes),
+    findall(Prefix:Name, member(Prefix:Name, AllNodes), Nodes).
+
+draw_prefix(Prefix) :-
+    write('digraph {'), nl,
+    nodes_with_prefix(Prefix, Nodes),
+    get_all_assocs(Nodes, Assocs),
+    draw_nodes(Assocs), nl, nl,
+    draw_edges(Assocs),
+    write('}'), nl.
+
+dot_command(PNGfile, CMD) :-
+    format(atom(CMD), 'dot -Tpng -o \'~w\'', [PNGfile]).
+
+dot_graph(Node, PNGfile) :-
+    dot_command(PNGfile, CMD),
+    open(pipe(CMD), write, Stream),
+    set_output(Stream),
+    draw_graph(Node),
+    close(Stream).
+
+dot_all(PNGfile) :-
+    dot_command(PNGfile, CMD),
+    open(pipe(CMD), write, Stream),
+    set_output(Stream),
+    draw_all,
+    close(Stream).
+
+dot_prefix(Prefix, PNGfile) :-
+    dot_command(PNGfile, CMD),
+    open(pipe(CMD), write, Stream),
+    set_output(Stream),
+    draw_prefix(Prefix),
+    close(Stream).
