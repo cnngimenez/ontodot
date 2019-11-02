@@ -22,6 +22,7 @@
 
 :- module(graphkb, [
               load_ttl/1,
+              draw_all/0,
               draw_graph/1,
               list_nodes/1
           ]).
@@ -34,7 +35,7 @@
 
 :- use_module(library(semweb/turtle)).
 :- use_module(library(semweb/rdf11)).
-%% :- ensure_loaded(library(semweb/rdf_db)).
+% :- ensure_loaded(library(semweb/rdf_db)).
 
 
 :- rdf_load(library(semweb/rdfs)).
@@ -66,8 +67,8 @@ that appear in the graph. Prefer the abbreviated form of each Subject if it
 exists.
 
 @param Node The node IRI or prefix:suffix form.
-@param Subjects A list of prefix:suffix if founded, or IRIs if there's no
-  abbreviated form.
+@param Subjects A list of triples `(S,P,O)` that are associated with the
+  given Node. Node is S in the triple.
 */
 get_objects(Node, Objects) :-
     rdf_subject(Node),
@@ -84,8 +85,8 @@ that appear in the graph. Prefer the abbreviated form of each Subject if it
 exists.
 
 @param Node The node IRI or prefix:suffix form.
-@param Subjects A list of prefix:suffix if founded, or IRIs if there's no
-  abbreviated form.
+@param Subjects A list of triples `(S,P,O)` that are associated with the
+  given Node. Node is O in the triple.
 */
 get_subjects(Node, Subjects) :-
     rdf_object(Node),
@@ -102,8 +103,8 @@ and the Objects from the (Node, Pred, Object) that appear in the graph.
 Prefer the abbreviated form of each Subject and Object if it exists.
 
 @param Node The node IRI or prefix:suffix form.
-@param Associations A list of prefix:suffix if founded, or IRIs if there's no
-  abbreviated form.
+@param Associations A list of triples `(S,P,O)` that are associated with the
+  given Node. Node is O or S in the triple.
 */
 get_associated(Node, Associations) :-
     rdf_global_id(Node, NodeAbbrv),
@@ -183,6 +184,21 @@ draw_edge((A, B, C)) :-
     format('edge [label="~w", style=dashed, arrowhead=normal] "~w" -> "~w";\n',
            [B2, A2, C2]).
 
+/**
+ draw_edges_noprops(+Assocs: list)
+
+Draw all edges that has no properties as object.
+
+@param Assocs A list of (S,P,O) triples. 
+@see draw_edge/1
+*/
+draw_edges_noprops([]) :- !.
+draw_edges_noprops([(_A, _B, C)|Rest]) :-
+    \+ rdf_is_iri(C), !, %% red cut
+    draw_edges_noprops(Rest).
+draw_edges_noprops([Edge|Rest]) :-
+    draw_edge(Edge),
+    draw_edges_noprops(Rest).
 
 /**
  draw_edges(+Triples: list) is det
@@ -195,6 +211,8 @@ draw_edges([]) :- !.
 draw_edges([Assoc|Rest]) :-
     draw_edge(Assoc),
     draw_edges(Rest).
+
+
 
 /**
  draw_nodes(+Triples: list) is det
@@ -260,3 +278,35 @@ See
 */
 list_nodes(Nodes) :-
     findall(Node, abbrev_nodes(Node), Nodes).
+
+/**
+ get_all_assocs(+Nodes: list, -Assocs: list).
+
+Get all associations.
+*/
+get_all_assocs([], []) :- !.
+get_all_assocs([Node|NRest], Lst) :-
+    get_all_assocs(NRest, Lst1),
+    (get_associated(Node, Assocs); Assocs = []),
+    append(Assocs, Lst1, Lst).
+
+
+/**
+ draw_all.
+
+Write to stdout the dot string that represent the default RDF graph.
+
+tell/1 and told/0 can be used to store the string into a file. For example:
+
+```
+?- load_ttl('my_kb.ttl'), tell('myfile.dot'), draw_all, told.
+```
+*/
+draw_all :-
+    write('digraph {'), nl,    
+    list_nodes(Nodes),
+    get_all_assocs(Nodes, Assocs),
+    draw_nodes(Assocs), nl, nl,
+    draw_edges_noprops(Assocs),
+    write('}'), nl.
+    
