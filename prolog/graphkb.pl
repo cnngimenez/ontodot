@@ -25,10 +25,12 @@
               draw_all/0,
               draw_graph/1,
               draw_prefix/1,
+              draw_hierarchy/0,
               list_nodes/1,
               dot_all/1,
               dot_prefix/2,
-              dot_graph/2
+              dot_graph/2,
+              dot_hierarchy/1
           ]).
 /** <module> Graph KB: Make graphs with the input ontology.
 
@@ -116,6 +118,33 @@ get_associated(Node, Associations) :-
     get_objects(NodeAbbrv, Objects),
     append(Subjects, Objects, Associations).
 
+
+get_isa_subjects(Node, Assocs) :-
+    rdf_object(Node),
+    findall((A,rdfs:subClassOf,Node),
+            rdf(A,rdfs:subClassOf,Node),
+            Assocs).
+get_isa_objects(Node, Assocs) :-
+    rdf_subject(Node),
+    findall((Node,rdfs:subClassOf,A),
+            rdf(Node,rdfs:subClassOf,A),
+            Assocs).
+
+/**
+ get_isa(+Node: term, -Assocs: list)
+
+Assocs is the list of triples where Node parent or child of a subclass.
+
+@param Node a Prefix:Suffix or an URL term.
+@param Assocs A list of triples like (S, rdfs:subClassOf, Node) or
+  (Node, rdfs:subClassOf, O).
+*/
+get_isa(Node, Assocs) :-
+    rdf_global_id(Node, NodeAbbrv),
+    get_isa_subjects(NodeAbbrv, Assocs1),
+    get_isa_objects(NodeAbbrv, Assocs2),
+    append(Assocs1, Assocs2, Assocs).
+    
 
 /**
  abbrev_name(+Name: term, ?Abbrev: term)
@@ -294,6 +323,12 @@ get_all_assocs([Node|NRest], Lst) :-
     (get_associated(Node, Assocs); Assocs = []),
     append(Assocs, Lst1, Lst).
 
+get_all_isa([], []) :- !.
+get_all_isa([Node|NRest], Lst) :-
+    get_all_isa(NRest, Lst1),
+    (get_isa(Node, Assocs); Assocs = []),
+    append(Assocs, Lst1, Lst).
+    
 
 /**
  draw_all.
@@ -329,26 +364,55 @@ draw_prefix(Prefix) :-
     draw_edges(Assocs),
     write('}'), nl.
 
+draw_hierarchy :-
+    write('digraph {'), nl,
+    list_nodes(AllNodes),
+    get_all_isa(AllNodes, Assocs),
+    draw_nodes(Assocs), nl, nl,
+    draw_edges(Assocs),
+    write('}'), nl.
+
+/**
+ prepare_cmd(+File: term, -Stream: term)
+
+Start the dot command for receiving the dot file from stdin. 
+
+@param File The file where the PNG file is created.
+@param Stream The stream opened for providing the dot. This is setted as the
+  default output.
+*/
+prepare_cmd(File, Stream) :-
+    dot_command(File, CMD),
+    open(pipe(CMD), write, Stream),
+    set_output(Stream).
+
+/**
+ dot_command(+File: term, -CMD: term)
+
+Create the dot command for exporting a PNG file at the given File path.
+
+@param File The PNG file path.
+@param CMD The resulting command.
+*/
 dot_command(PNGfile, CMD) :-
     format(atom(CMD), 'dot -Tpng -o \'~w\'', [PNGfile]).
 
 dot_graph(Node, PNGfile) :-
-    dot_command(PNGfile, CMD),
-    open(pipe(CMD), write, Stream),
-    set_output(Stream),
+    prepare_cmd(PNGfile, Stream),
     draw_graph(Node),
     close(Stream).
 
 dot_all(PNGfile) :-
-    dot_command(PNGfile, CMD),
-    open(pipe(CMD), write, Stream),
-    set_output(Stream),
+    prepare_cmd(PNGfile, Stream),
     draw_all,
     close(Stream).
 
 dot_prefix(Prefix, PNGfile) :-
-    dot_command(PNGfile, CMD),
-    open(pipe(CMD), write, Stream),
-    set_output(Stream),
+    prepare_cmd(PNGfile, Stream),
     draw_prefix(Prefix),
+    close(Stream).
+
+dot_hierarchy(PNGfile) :-
+    prepare_cmd(PNGfile, Stream),
+    draw_hierarchy,
     close(Stream).
