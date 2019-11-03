@@ -119,11 +119,28 @@ get_associated(Node, Associations) :-
     append(Subjects, Objects, Associations).
 
 
+/**
+ get_isa_subjects(+Node: term, -Assocs: list)
+
+Get all the children of the given node.
+
+@param Node A prefix:suffix term or an URI.
+@param Assocs A list of triples `(S, rdfs:subClassOf, Node)`.
+*/
 get_isa_subjects(Node, Assocs) :-
     rdf_object(Node),
     findall((A,rdfs:subClassOf,Node),
             rdf(A,rdfs:subClassOf,Node),
             Assocs).
+
+/**
+ get_isa_objects(+Node: term, -Assocs: list)
+
+Get all the parents of the given node.
+
+@param Node A prefix:suffix term or an URI.
+@param Assocs A list of triples `(Node, rdfs:subClassOf, O)`.
+*/
 get_isa_objects(Node, Assocs) :-
     rdf_subject(Node),
     findall((Node,rdfs:subClassOf,A),
@@ -323,6 +340,19 @@ get_all_assocs([Node|NRest], Lst) :-
     (get_associated(Node, Assocs); Assocs = []),
     append(Assocs, Lst1, Lst).
 
+/**
+ get_all_isa(+Nodes: list, -Assocs: list)
+
+Given a list of nodes, make Assocs a list of triples with their is-a 
+associations.
+
+Assocs will have an is-a relationship whose each node is a parent or child 
+of other node. 
+
+@param Nodes A list of prefix:suffix or IRIs.
+@param Assocs A list of triples with the rdfs:subClassOf relationship.
+@see get_isa/2
+*/
 get_all_isa([], []) :- !.
 get_all_isa([Node|NRest], Lst) :-
     get_all_isa(NRest, Lst1),
@@ -352,10 +382,27 @@ draw_all :-
     write('}'), nl.
 
 
+/**
+ nodes_with_prefix(+Prefix:term, -Nodes: list)
+
+Nodes is a list of all prefix:suffixs declared to be in the namespace/prefix
+given.
+
+@param Prefix The prefix term.
+@param Nodes A list of Prefix:Name terms.
+*/
 nodes_with_prefix(Prefix, Nodes) :-
     list_nodes(AllNodes),
     findall(Prefix:Name, member(Prefix:Name, AllNodes), Nodes).
 
+/**
+ draw_prefix(+Prefix: term)
+
+Write in stdout the dot text with the relations of all the nodes with a certain
+prefix.
+
+@param Prefix A term.
+*/
 draw_prefix(Prefix) :-
     write('digraph {'), nl,
     nodes_with_prefix(Prefix, Nodes),
@@ -364,6 +411,11 @@ draw_prefix(Prefix) :-
     draw_edges(Assocs),
     write('}'), nl.
 
+/**
+ draw_hierarchy.
+
+Write into stdout the dot text with the hierarchy is-a relation of all nodes.
+*/
 draw_hierarchy :-
     write('digraph {'), nl,
     list_nodes(AllNodes),
@@ -397,21 +449,52 @@ Create the dot command for exporting a PNG file at the given File path.
 dot_command(PNGfile, CMD) :-
     format(atom(CMD), 'dot -Tpng -o \'~w\'', [PNGfile]).
 
+/**
+ dot_graph(+Node: term, +PNGFile: term)
+
+Create a PNG file with all the relationships of a given node.
+
+@param Node The prefix:suffix or IRI.
+@param PNGFile The path to the PNG file to be generated.
+*/
 dot_graph(Node, PNGfile) :-
     prepare_cmd(PNGfile, Stream),
     draw_graph(Node),
     close(Stream).
 
+/**
+ dot_all(+PNGfile: term)
+
+Create a PNG file with all the relationships of all the nodes.
+
+@param PNGfile The path to the PNG file to be generated.
+*/
 dot_all(PNGfile) :-
     prepare_cmd(PNGfile, Stream),
     draw_all,
     close(Stream).
 
+/**
+ dot_prefix(+Prefix: term, +PNGfile: term)
+
+Create a PNG file with all the nodes from a namespace/prefix and their 
+relations.
+
+@param Prefix The prefix term.
+@param PNGfile The path to the PNG file to be generated.
+*/
 dot_prefix(Prefix, PNGfile) :-
     prepare_cmd(PNGfile, Stream),
     draw_prefix(Prefix),
     close(Stream).
 
+/**
+ dot_hierarchy(+PNGfile: term)
+
+Create a PNG file with all the nodes and their is-a relationships.
+
+@param PNGfile The path to the PNG file to be generated.
+*/
 dot_hierarchy(PNGfile) :-
     prepare_cmd(PNGfile, Stream),
     draw_hierarchy,
