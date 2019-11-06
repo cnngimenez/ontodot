@@ -340,8 +340,6 @@ Nodes is a list of nodes in its most abbreviated form.
 
 Return all the nodes in the RDF graph in its abbreviated form.
 The current registered prefixes are used for making abbreviations. 
-
-See 
 */
 list_nodes(Nodes) :-
     findall(Node, abbrev_nodes(Node), Nodes).
@@ -461,76 +459,94 @@ draw_hierarchy(Str) :-
 
 Start the dot command for receiving the dot file from stdin. 
 
-@param File The file where the PNG file is created.
+The type of the image to generate is determined by the File name extension.
+
+@param File The file where the image file is created.
 @param Stream The stream opened for providing the dot. This is setted as the
   default output.
 */
 prepare_cmd(File, Stream) :-
-    dot_command(File, CMD),
+    file_name_extension(_Base, Type, File),
+    dot_command(Type, File, CMD),
     open(pipe(CMD), write, Stream).    
 
 /**
- dot_command(+File: term, -CMD: term)
+ dot_command(+Type: term, +File: term, -CMD: term)
 
-Create the dot command for exporting a PNG file at the given File path.
+Create the dot command for exporting an image file at the given File path.
 
-@param File The PNG file path.
+@param Type The type of the output file. See dot manpage.
+@param File The image file path.
 @param CMD The resulting command.
+
+@see dot manpage for available types.
 */
-dot_command(PNGfile, CMD) :-
-    format(atom(CMD), 'dot -Tpng -o \'~w\'', [PNGfile]).
+dot_command(Type, File, CMD) :-
+    format(atom(CMD), 'dot -T~s -o \'~w\'', [Type, File]).
 
 /**
- dot_graph(+Node: term, +PNGFile: term)
+ dot_graph(+Node: term, +File: term)
 
-Create a PNG file with all the relationships of a given node.
+Create an image file with all the relationships of a given node.
+
+The image type is deduce by the File extension. 'example.png' will create a PNG
+image.
 
 @param Node The prefix:suffix or IRI.
-@param PNGFile The path to the PNG file to be generated.
+@param File The path to the image file to be generated.
 */
-dot_graph(Node, PNGfile) :-
-    prepare_cmd(PNGfile, Stream),
+dot_graph(Node, File) :-
+    prepare_cmd(File, Stream),
     draw_graph(Node, Str),
     write(Stream, Str),
     close(Stream).
 
 /**
- dot_all(+PNGfile: term)
+ dot_all(+File: term)
 
-Create a PNG file with all the relationships of all the nodes.
+Create an image file with all the relationships of all the nodes.
 
-@param PNGfile The path to the PNG file to be generated.
+The image type is deduce by the File extension. 'example.png' will create a PNG
+image.
+
+@param File The path to the image file to be generated.
 */
-dot_all(PNGfile) :-
-    prepare_cmd(PNGfile, Stream),
+dot_all(File) :-
+    prepare_cmd(File, Stream),
     draw_all(Str),
     write(Stream, Str),
     close(Stream).
 
 /**
- dot_prefix(+Prefix: term, +PNGfile: term)
+ dot_prefix(+Prefix: term, +File: term)
 
-Create a PNG file with all the nodes from a namespace/prefix and their 
+Create an image file with all the nodes from a namespace/prefix and their 
 relations.
 
+The image type is deduce by the File extension. 'example.png' will create a PNG
+image.
+
 @param Prefix The prefix term.
-@param PNGfile The path to the PNG file to be generated.
+@param File The path to the image file to be generated.
 */
-dot_prefix(Prefix, PNGfile) :-
-    prepare_cmd(PNGfile, Stream),
+dot_prefix(Prefix, File) :-
+    prepare_cmd(File, Stream),
     draw_prefix(Prefix, Str),
     write(Stream, Str),
     close(Stream).
 
 /**
- dot_hierarchy(+PNGfile: term)
+ dot_hierarchy(+File: term)
 
-Create a PNG file with all the nodes and their is-a relationships.
+Create an image file with all the nodes and their is-a relationships.
 
-@param PNGfile The path to the PNG file to be generated.
+The image type is deduce by the File extension. 'example.png' will create a PNG
+image.
+
+@param File The path to the image file to be generated.
 */
-dot_hierarchy(PNGfile) :-
-    prepare_cmd(PNGfile, Stream),
+dot_hierarchy(File) :-
+    prepare_cmd(File, Stream),
     draw_hierarchy(Str),
     write(Stream, Str),
     close(Stream).
