@@ -22,7 +22,7 @@
 
 name(ontodot).
 title('Create dot files from an RDF ontology.').
-version('0.0.1').
+version('0.0.2').
 author('Christian Gimenez', 'cgimenez.public@openmailbox.org').
 home('https://bitbucket.org/cnngimenez/ontodot').
 download('https://bitbucket.org/cnngimenez/ontodot/get/ontodot-*.zip').
