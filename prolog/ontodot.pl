@@ -114,8 +114,8 @@ Prefer the abbreviated form of each Subject and Object if it exists.
 */
 get_associated(Node, Associations) :-
     rdf_global_id(Node, NodeAbbrv),
-    get_subjects(NodeAbbrv, Subjects),
-    get_objects(NodeAbbrv, Objects),
+    (get_subjects(NodeAbbrv, Subjects) ; Subjects = []),
+    (get_objects(NodeAbbrv, Objects) ; Objects = []),
     append(Subjects, Objects, Associations).
 
 
@@ -311,7 +311,7 @@ draw_graph(Node, Str) :-
     draw_edges(Assocs, EdgesStr),
 
     format(string(Str),
-           'digraph {~n~s~n~n~s}~n',
+           'digraph {rankdir=RL;~n~s~n~n~s}~n',
            [NodesStr,EdgesStr]).
     
 
@@ -397,7 +397,7 @@ draw_all(Str) :-
     draw_edges_noprops(Assocs, EdgesStr),
 
     format(string(Str),
-           'digraph {~n~s~n~n~s}~n',
+           'digraph {rankdir=LR;~n~s~n~n~s}~n',
            [NodesStr, EdgesStr]).
 
 
@@ -432,7 +432,7 @@ draw_prefix(Prefix, Str) :-
 
     format(
         string(Str),
-        'digraph {~n~s~n~n~s}~n',
+        'digraph {rankdir=RL;~n~s~n~n~s}~n',
         [NodesStr, EdgesStr]).
 
 /**
